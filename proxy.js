@@ -7,93 +7,91 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const SALES_ORDERS_AUTH_TOKEN = process.env.SALES_ORDERS_AUTH_TOKEN;
-const TRANSACTION_AUTH_TOKEN = process.env.TRANSACTION_AUTH_TOKEN;
+const USERNAME = process.env.API_USERNAME;
+const PASSWORD = process.env.API_PASSWORD;
 
-// Check required environment variables early
-if (!SALES_ORDERS_AUTH_TOKEN) {
-  throw new Error("❌ Missing SALES_ORDERS_AUTH_TOKEN in environment variables.");
-}
-if (!TRANSACTION_AUTH_TOKEN) {
-  throw new Error("❌ Missing TRANSACTION_AUTH_TOKEN in environment variables.");
+if (!USERNAME || !PASSWORD) {
+  throw new Error('❌ Missing API_USERNAME or API_PASSWORD in env variables.');
 }
 
-// Enable CORS and JSON parsing
+let currentToken = null;
+let tokenExpiry = 0; // timestamp in ms
+
+async function loginAndGetToken() {
+  try {
+    const res = await fetch('http://gsuite.graphicstar.com.ph/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: USERNAME, password: PASSWORD }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Login failed with status ${res.status}`);
+    }
+
+    const data = await res.json();
+console.log('Login response data:', data);  // for debugging
+
+const token = data.data?.token;
+if (!token) throw new Error('No token in login response');
+
+tokenExpiry = Date.now() + 50 * 60 * 1000;  // or adjust as needed
+currentToken = token;
+console.log('✅ Logged in, token refreshed');
+
+  } catch (error) {
+    console.error('❌ Error logging in:', error);
+    throw error;
+  }
+}
+
+
+async function getValidToken() {
+  if (!currentToken || Date.now() >= tokenExpiry) {
+    await loginAndGetToken();
+  }
+  return currentToken;
+}
+
+// Middleware and routes
 app.use(cors());
 app.use(express.json());
 
-// Simple logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
-
-// Route: Fetch sales orders
 app.post('/api/sales_orders', async (req, res) => {
-  const payload = req.body;
-
   try {
+    const token = await getValidToken();
     const response = await fetch('http://gsuite.graphicstar.com.ph/api/get_sales_orders', {
       method: 'POST',
       headers: {
-        'Authorization': SALES_ORDERS_AUTH_TOKEN,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(req.body),
     });
 
     if (!response.ok) {
       return res.status(response.status).json({ error: `API error with status ${response.status}` });
     }
 
-    const text = await response.text();
-    try {
-      const data = JSON.parse(text);
-      res.json(data);
-    } catch (e) {
-      console.error("❌ Failed to parse sales_orders JSON:", e);
-      res.status(500).json({ error: 'Invalid JSON from sales orders API', raw: text });
-    }
-
+    const data = await response.json();
+    res.json(data);
   } catch (error) {
     console.error('❌ Error fetching sales orders:', error);
     res.status(500).json({ error: 'Sales orders API request failed' });
   }
 });
 
-
-// Route: Fetch transaction data by so_pk
 app.post('/api/get_transaction', async (req, res) => {
-  const { so_pk } = req.body;
-
-  if (!so_pk) {
-    return res.status(400).json({ error: "Missing 'so_pk' in request body." });
-  }
-
-  const transactionPayload = {
-    where: {
-      Module_TransH: "SALESORDER",
-      SysPK_TransH: so_pk,
-    },
-    include: [
-      ["transaction_transactionledgerjobs", "transactionledgerjob_shippingaddress", "transactionledgerjob_location", "transactionledgerjob_job", "transactionledgerjob_transactionjo"],
-      "transaction_customer",
-      "transaction_shippingaddress",
-      "transaction_contactperson",
-      "transaction_department",
-      "transaction_location",
-      "transaction_employee",
-      "transaction_transactionsl",
-      "transaction_transactionto"
-    ],
-    order: [[{}, "ID_LdgrJob", "ASC"]],
-  };
-
   try {
+    const token = await getValidToken();
+
+    // Build your transaction payload here (use req.body or similar)
+    const transactionPayload = req.body;
+
     const response = await fetch('http://gsuite.graphicstar.com.ph/api/get_transaction', {
       method: 'POST',
       headers: {
-        'Authorization': TRANSACTION_AUTH_TOKEN,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(transactionPayload),
@@ -103,30 +101,24 @@ app.post('/api/get_transaction', async (req, res) => {
       return res.status(response.status).json({ error: `Transaction API error with status ${response.status}` });
     }
 
-    const text = await response.text();
-
-    try {
-      const data = JSON.parse(text);
-      return res.json(data);
-    } catch (parseError) {
-      console.error("❌ Failed to parse transaction JSON:", parseError);
-      return res.status(500).json({ error: 'Invalid JSON from transaction API', raw: text });
-    }
+    const data = await response.json();
+    res.json(data);
   } catch (error) {
     console.error('❌ Error fetching transaction:', error);
-    return res.status(500).json({ error: 'Transaction API request failed' });
+    res.status(500).json({ error: 'Transaction API request failed' });
   }
 });
 
-// Serve static frontend files (after API routes)
+// Serve static files and 404
 app.use(express.static(path.join(__dirname, 'public')));
+app.use((req, res) => res.status(404).send('Route not found'));
 
-// 404 handler for unmatched routes
-app.use((req, res) => {
-  res.status(404).send('Route not found');
-});
-
-// Start server
-app.listen(PORT, () => {
+// Start server and login initially
+app.listen(PORT, async () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
+  try {
+    await loginAndGetToken();
+  } catch (err) {
+    console.error('❌ Initial login failed. Server may not function correctly.');
+  }
 });
