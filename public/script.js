@@ -43,14 +43,17 @@ function clearRow(button) {
 
 // Show modal and load sales orders (either cached or fetch new)
 function openModal() {
+    console.log('🟢 Opening modal and fetching SOs...');
   modal.style.display = "block";
   searchInput.value = "";
-  if (salesOrderCache) {
-    renderSOList(salesOrderCache);
-  } else {
-    fetchSOs();
-  }
+  salesOrderCache = null; // clear old cache
+  fetchSOs(); // always fetch new
 }
+function refreshSO() {
+  salesOrderCache = null;
+  fetchSOs();
+}
+
 
 // Close the modal dialog
 function closeModal() {
@@ -84,6 +87,12 @@ function clearLoadingIndicator() {
 }
 
 async function fetchSOs() {
+  const today = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+
   showLoadingIndicator("Loading sales orders...");
   try {
     const response = await fetch("http://localhost:3000/api/sales_orders", {
@@ -96,8 +105,8 @@ async function fetchSOs() {
         searchKey: "",
         filterDate: {
           filter: "as of",
-          date1: { hide: false, date: "May 24, 2025" },
-          date2: { hide: true, date: "May 24, 2025" }
+          date1: { hide: false, date: today },
+          date2: { hide: true, date: today }
         },
         locationPK: "00a18fc0-051d-11ea-8e35-aba492d8cb65",
         departmentPK: null,
@@ -135,6 +144,7 @@ async function fetchSOs() {
     soList.textContent = "Failed to load sales orders.";
   }
 }
+
 
 // Update renderSOList to support append mode
 function renderSOList(salesOrders, append = false) {
