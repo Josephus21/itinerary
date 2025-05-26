@@ -43,17 +43,14 @@ function clearRow(button) {
 
 // Show modal and load sales orders (either cached or fetch new)
 function openModal() {
-    console.log('🟢 Opening modal and fetching SOs...');
   modal.style.display = "block";
   searchInput.value = "";
-  salesOrderCache = null; // clear old cache
-  fetchSOs(); // always fetch new
+  if (salesOrderCache) {
+    renderSOList(salesOrderCache);
+  } else {
+    fetchSOs();
+  }
 }
-function refreshSO() {
-  salesOrderCache = null;
-  fetchSOs();
-}
-
 
 // Close the modal dialog
 function closeModal() {
@@ -70,7 +67,8 @@ searchInput.addEventListener("input", () => {
   renderSOList(filtered);
 });
 
-// Show loading indicator at top of soList
+// Fetch sales orders from the API
+// Helper function must be declared first
 function showLoadingIndicator(text = "Loading...") {
   soList.innerHTML = `
     <div class="loading-indicator">
@@ -80,20 +78,21 @@ function showLoadingIndicator(text = "Loading...") {
   `;
 }
 
-// Clear loading indicator
 function clearLoadingIndicator() {
   const indicator = soList.querySelector(".loading-indicator");
   if (indicator) indicator.remove();
 }
 
+// Then your main async function which calls the helpers
 async function fetchSOs() {
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
-    day: "numeric"
+    day: "numeric",
   });
 
   showLoadingIndicator("Loading sales orders...");
+
   try {
     const response = await fetch("http://localhost:3000/api/sales_orders", {
       method: "POST",
@@ -105,8 +104,8 @@ async function fetchSOs() {
         searchKey: "",
         filterDate: {
           filter: "as of",
-          date1: { hide: false, date: today },
-          date2: { hide: true, date: today }
+          date1: { hide: false, date: today },  // Use the dynamic date here
+          date2: { hide: true, date: today },
         },
         locationPK: "00a18fc0-051d-11ea-8e35-aba492d8cb65",
         departmentPK: null,
@@ -114,7 +113,7 @@ async function fetchSOs() {
         salesRepPK: null,
         status: "",
         limit: 300,
-        offset: 0
+        offset: 0,
       }),
     });
 
@@ -134,7 +133,7 @@ async function fetchSOs() {
       for (let i = 0; i < salesOrderCache.length; i += batchSize) {
         const batch = salesOrderCache.slice(i, i + batchSize);
         renderSOList(batch, true); // true = append mode
-        await new Promise(r => setTimeout(r, 100)); // small delay to simulate progressive load
+        await new Promise((r) => setTimeout(r, 100)); // small delay to simulate progressive load
       }
     } else {
       soList.textContent = "No sales orders found or invalid data format.";
@@ -146,13 +145,11 @@ async function fetchSOs() {
 }
 
 
-// Update renderSOList to support append mode
-function renderSOList(salesOrders, append = false) {
-  if (!append) {
-    soList.innerHTML = ""; // clear before render
-  }
+// Render sales orders into the modal list
+function renderSOList(salesOrders) {
+  soList.innerHTML = "";
   if (salesOrders.length === 0) {
-    if (!append) soList.textContent = "No matching sales orders.";
+    soList.textContent = "No matching sales orders.";
     return;
   }
   salesOrders.forEach(so => {
@@ -164,7 +161,6 @@ function renderSOList(salesOrders, append = false) {
   });
 }
 
-
 // Select a sales order and populate current row with its data
 async function selectSO(so) {
   if (!currentRow) return;
@@ -173,8 +169,7 @@ async function selectSO(so) {
   currentRow.cells[0].textContent = so.so_upk || "";
 
   // Insert a text input in cell 1 (index 1)
-  currentRow.cells[1].innerHTML = `<input type="text" class="qty-input" value="" />
-`;
+  currentRow.cells[1].innerHTML = `<input type="text" value="" />`;
 
   // Show loading in cells 2 to 7
   for (let i = 2; i <= 7; i++) {
@@ -182,7 +177,7 @@ async function selectSO(so) {
   }
 
   currentRow.cells[8].textContent = so.so_upk || "";
-  currentRow.cells[9].innerHTML= '<input type="text" class="signature" value="_____________________________________"/>';
+  currentRow.cells[9].textContent = "";
   currentRow.cells[10].innerHTML = `<button type="button" onclick="clearRow(this)">Clear</button>`;
 
   if (!so.so_pk) {
@@ -212,10 +207,8 @@ async function selectSO(so) {
       closeModal();
       return;
     }
-const BillToAddress_Cust = transaction.transaction_customer?.BillToAddress_Cust || "";
-    // Populate cells with transaction data
-    currentRow.cells[2].textContent = transaction.transaction_customer?.BillToAddress_Cust|| "";
 
+    currentRow.cells[2].textContent = transaction.ContractDescription_TransH || "";
 
     // Combine delivery dates from ledger jobs, separated by commas
     const deliveryDates = transaction.transaction_transactionledgerjobs
@@ -227,8 +220,8 @@ const BillToAddress_Cust = transaction.transaction_customer?.BillToAddress_Cust 
     currentRow.cells[4].textContent = transaction.transaction_contactperson?.Name_ContactP || "";
 
     // Insert time inputs in cells 5 and 6
-    currentRow.cells[5].innerHTML = "";
-    currentRow.cells[6].innerHTML = "";
+    currentRow.cells[5].innerHTML = `<input type="time" value="" />`;
+    currentRow.cells[6].innerHTML = `<input type="time" value="" />`;
 
     currentRow.cells[7].textContent = "";
 
@@ -247,14 +240,6 @@ function printItinerary() {
   const driverLine = "Driver's Name: _________________";
 
   const tableClone = document.getElementById("dataTable").cloneNode(true);
-
-  // Replace inputs with their values
-  tableClone.querySelectorAll("input").forEach(input => {
-    const td = input.closest("td");
-    if (td) td.textContent = input.value;
-  });
-
-  // Remove action buttons (like Clear)
   const theadRow = tableClone.querySelector("thead tr");
   if (theadRow) theadRow.removeChild(theadRow.lastElementChild);
   const rows = tableClone.querySelectorAll("tbody tr");
@@ -272,14 +257,9 @@ function printItinerary() {
             border: 1px solid black;
             border-collapse: collapse;
             padding: 8px;
-            width: auto;
+            width: 100%;
             text-align: left;
           }
-            .signature-label {
-          margin-top: 10px;
-          width: 80%;
-        }
-
         </style>
       </head>
       <body>
@@ -304,5 +284,6 @@ function printItinerary() {
     printWindow.close();
   }, 300);
 }
+
 // Initial setup: attach click events on page load
 attachClickEvents();
