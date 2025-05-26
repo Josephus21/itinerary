@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GFX ITINERARY</title>
+</head>
+<link rel="stylesheet" href="style.css">
+
+<body>
+
+<h2>LOGISTICS ITINERARY</h2>
+<button onclick="addRow()">Add Row</button>
+<button onclick="printItinerary()">Print Itinerary</button>
+
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th>SO/TO no.</th>
+      <th>Qty</th>
+      <th>Address</th>
+      <th>Delivery Date</th>
+      <th>Contact Person</th>
+      <th>Time In</th>
+      <th>Time Out</th>
+      <th>ODOMETER</th>
+      <th>BS</th>
+      <th>Signature</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+
+
+  <tbody>
+    <tr>
+      <td class="clickable">Click to select</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      
+    </tr>
+  </tbody>
+</table>
+
+<!-- Modal -->
+<div id="soModal">
+  <h3>Select Sales Order</h3>
+  <input type="text" id="searchInput" placeholder="Search SO number..." />
+  <div id="soList">Loading...</div>
+  <button onclick="closeModal()">Close</button>
+</div>
+
+<script src="script.js"></script>
+
+
+</body>
+</html>

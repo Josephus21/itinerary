@@ -1,0 +1,44 @@
+ <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 8px;
+    }
+    td.clickable {
+      cursor: pointer;
+      background-color: #eef;
+    }
+    #soModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      padding: 20px;
+      background-color: white;
+      border: 1px solid black;
+      top: 10%;
+      left: 25%;
+      width: 50%;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    #soModal h3 {
+      margin-top: 0;
+    }
+    .so-item {
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .so-item:hover {
+      background-color: #f0f0f0;
+    }
+    #searchInput {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+    }
+    button {
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+  </style>
