@@ -177,7 +177,7 @@ async function selectSO(so) {
   }
 
   currentRow.cells[8].textContent = so.so_upk || "";
-  currentRow.cells[9].textContent = ' <input type="text" value="__________________________________" />'; ;
+  currentRow.cells[9].innerHTML = ' <input type="text" value="__________________________________" />'; ;
   currentRow.cells[10].innerHTML = `<button type="button" onclick="clearRow(this)">Clear</button>`;
 
   if (!so.so_pk) {
