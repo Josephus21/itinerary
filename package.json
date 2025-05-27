@@ -20,5 +20,13 @@
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Josephus21/itinerary.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Josephus21/itinerary/issues"
+  },
+  "homepage": "https://github.com/Josephus21/itinerary#readme",
   "description": ""
 }

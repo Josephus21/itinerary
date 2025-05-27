@@ -6,6 +6,11 @@ const dataTable = document.getElementById("dataTable").querySelector("tbody");
 let currentRow = null;
 let salesOrderCache = null;
 
+// Determine API base URL dynamically
+const API_BASE_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://itinerary-keqh.onrender.com/'; // <--- REPLACE with your Render URL here!
+
 // Attach click event listeners to all clickable cells
 function attachClickEvents() {
   document.querySelectorAll("td.clickable").forEach(cell => {
@@ -68,7 +73,6 @@ searchInput.addEventListener("input", () => {
 });
 
 // Fetch sales orders from the API
-// Helper function must be declared first
 function showLoadingIndicator(text = "Loading...") {
   soList.innerHTML = `
     <div class="loading-indicator">
@@ -83,7 +87,6 @@ function clearLoadingIndicator() {
   if (indicator) indicator.remove();
 }
 
-// Then your main async function which calls the helpers
 async function fetchSOs() {
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -94,7 +97,7 @@ async function fetchSOs() {
   showLoadingIndicator("Loading sales orders...");
 
   try {
-    const response = await fetch("http://localhost:3000/api/sales_orders", {
+    const response = await fetch(`${API_BASE_URL}/api/sales_orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -104,7 +107,7 @@ async function fetchSOs() {
         searchKey: "",
         filterDate: {
           filter: "as of",
-          date1: { hide: false, date: today },  // Use the dynamic date here
+          date1: { hide: false, date: today },
           date2: { hide: true, date: today },
         },
         locationPK: "00a18fc0-051d-11ea-8e35-aba492d8cb65",
@@ -132,8 +135,8 @@ async function fetchSOs() {
       const batchSize = 10;
       for (let i = 0; i < salesOrderCache.length; i += batchSize) {
         const batch = salesOrderCache.slice(i, i + batchSize);
-        renderSOList(batch, true); // true = append mode
-        await new Promise((r) => setTimeout(r, 100)); // small delay to simulate progressive load
+        renderSOList(batch, true);
+        await new Promise((r) => setTimeout(r, 100));
       }
     } else {
       soList.textContent = "No sales orders found or invalid data format.";
@@ -143,7 +146,6 @@ async function fetchSOs() {
     soList.textContent = "Failed to load sales orders.";
   }
 }
-
 
 // Render sales orders into the modal list
 function renderSOList(salesOrders) {
@@ -165,19 +167,15 @@ function renderSOList(salesOrders) {
 async function selectSO(so) {
   if (!currentRow) return;
 
-  // Set SO number cell
   currentRow.cells[0].textContent = so.so_upk || "";
-
-  // Insert a text input in cell 1 (index 1)
   currentRow.cells[1].innerHTML = `<input type="text" value="" />`;
 
-  // Show loading in cells 2 to 7
   for (let i = 2; i <= 7; i++) {
     currentRow.cells[i].textContent = "Loading...";
   }
 
   currentRow.cells[8].textContent = so.so_upk || "";
-  currentRow.cells[9].innerHTML = ' <input type="text" value="__________________________________" />'; ;
+  currentRow.cells[9].innerHTML = `<input type="text" value="__________________________________" />`;
   currentRow.cells[10].innerHTML = `<button type="button" onclick="clearRow(this)">Clear</button>`;
 
   if (!so.so_pk) {
@@ -188,8 +186,7 @@ async function selectSO(so) {
   }
 
   try {
-    // Fetch transaction details using so_pk
-    const transactionResponse = await fetch("http://localhost:3000/api/get_transaction", {
+    const transactionResponse = await fetch(`${API_BASE_URL}/api/get_transaction`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ so_pk: so.so_pk }),
@@ -210,7 +207,6 @@ async function selectSO(so) {
 
     currentRow.cells[2].textContent = transaction.ContractDescription_TransH || "";
 
-    // Combine delivery dates from ledger jobs, separated by commas
     const deliveryDates = transaction.transaction_transactionledgerjobs
       ?.map(job => job.DeliveryDate_LdgrJob)
       .filter(Boolean)
@@ -219,7 +215,6 @@ async function selectSO(so) {
 
     currentRow.cells[4].textContent = transaction.transaction_contactperson?.Name_ContactP || "";
 
-    // Insert time inputs in cells 5 and 6
     currentRow.cells[5].innerHTML = "";
     currentRow.cells[6].innerHTML = "";
 
@@ -241,7 +236,6 @@ function printItinerary() {
 
   const tableClone = document.getElementById("dataTable").cloneNode(true);
 
-  // 🔁 Replace all inputs with plain text
   tableClone.querySelectorAll("input").forEach(input => {
     const td = input.closest("td");
     if (td) {
@@ -249,13 +243,11 @@ function printItinerary() {
     }
   });
 
-  // 🧹 Remove "Clear" buttons
   const theadRow = tableClone.querySelector("thead tr");
   if (theadRow) theadRow.removeChild(theadRow.lastElementChild);
   const rows = tableClone.querySelectorAll("tbody tr");
   rows.forEach(row => row.removeChild(row.lastElementChild));
 
-  // 🖨️ Print-friendly HTML
   const printContent = `
     <html>
       <head>
@@ -285,13 +277,11 @@ function printItinerary() {
     </html>
   `;
 
-  // 🖨️ Open print window
   const printWindow = window.open('', '', 'width=900,height=700');
   printWindow.document.write(printContent);
   printWindow.document.close();
   printWindow.focus();
 
-  // 🖨️ Trigger print and close
   setTimeout(() => {
     printWindow.print();
     printWindow.close();
