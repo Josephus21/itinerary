@@ -9,7 +9,7 @@ let salesOrderCache = null;
 // Determine API base URL dynamically
 const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
-  : 'https://itinerary-keqh.onrender.com/';
+  : 'https://itinerary-keqh.onrender.com';
 
 // Attach click event listeners to all clickable cells
 function attachClickEvents() {
