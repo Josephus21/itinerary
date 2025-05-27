@@ -240,11 +240,22 @@ function printItinerary() {
   const driverLine = "Driver's Name: _________________";
 
   const tableClone = document.getElementById("dataTable").cloneNode(true);
+
+  // 🔁 Replace all inputs with plain text
+  tableClone.querySelectorAll("input").forEach(input => {
+    const td = input.closest("td");
+    if (td) {
+      td.textContent = input.value || "";
+    }
+  });
+
+  // 🧹 Remove "Clear" buttons
   const theadRow = tableClone.querySelector("thead tr");
   if (theadRow) theadRow.removeChild(theadRow.lastElementChild);
   const rows = tableClone.querySelectorAll("tbody tr");
   rows.forEach(row => row.removeChild(row.lastElementChild));
 
+  // 🖨️ Print-friendly HTML
   const printContent = `
     <html>
       <head>
@@ -274,11 +285,13 @@ function printItinerary() {
     </html>
   `;
 
+  // 🖨️ Open print window
   const printWindow = window.open('', '', 'width=900,height=700');
   printWindow.document.write(printContent);
   printWindow.document.close();
   printWindow.focus();
 
+  // 🖨️ Trigger print and close
   setTimeout(() => {
     printWindow.print();
     printWindow.close();
