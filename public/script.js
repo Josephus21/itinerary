@@ -167,20 +167,25 @@ function renderSOList(salesOrders) {
 async function selectSO(so) {
   if (!currentRow) return;
 
-  currentRow.cells[0].textContent = so.so_upk || "";
-  currentRow.cells[1].innerHTML = `<input type="text" value="" />`;
+  const parentTbody = currentRow.parentElement;
+  const originalRowIndex = currentRow.sectionRowIndex; // FIX: use sectionRowIndex instead of rowIndex
 
-  for (let i = 2; i <= 7; i++) {
-    currentRow.cells[i].textContent = "Loading...";
-  }
-
-  currentRow.cells[8].textContent = so.so_upk || "";
-  currentRow.cells[9].innerHTML = `<input type="text" value="__________________________________" />`;
-  currentRow.cells[10].innerHTML = `<button type="button" onclick="clearRow(this)">Clear</button>`;
+  // Clear the current row before inserting multiple rows if needed
+  currentRow.remove();
+  currentRow = null;
 
   if (!so.so_pk) {
     console.error("Missing so_pk in selected sales order");
-    for (let i = 2; i <= 7; i++) currentRow.cells[i].textContent = "N/A";
+    // Insert a blank row to keep UI consistent
+    const blankRow = parentTbody.insertRow(originalRowIndex);
+    blankRow.innerHTML = `
+      <td class="clickable">Click to select</td>
+      <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
+      <td></td><td>${so.so_upk || ""}</td>
+      <td><input type="text" value="__________________________________" /></td>
+      <td><button type="button" onclick="clearRow(this)">Clear</button></td>
+    `;
+    attachClickEvents();
     closeModal();
     return;
   }
@@ -200,33 +205,65 @@ async function selectSO(so) {
 
     if (!transaction) {
       console.warn("Transaction data is empty");
-      for (let i = 2; i <= 7; i++) currentRow.cells[i].textContent = "N/A";
+      // Insert a blank row with N/A info
+      const blankRow = parentTbody.insertRow(originalRowIndex);
+      blankRow.innerHTML = `
+        <td class="clickable">Click to select</td>
+        <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
+        <td></td><td>${so.so_upk || ""}</td>
+        <td><input type="text" value="__________________________________" /></td>
+        <td><button type="button" onclick="clearRow(this)">Clear</button></td>
+      `;
+      attachClickEvents();
       closeModal();
       return;
     }
 
-    currentRow.cells[2].textContent = transaction.ContractDescription_TransH || "";
+    // Extract item descriptions and delivery dates from all jobs
+    const jobs = transaction.transaction_transactionledgerjobs || [];
+    const maxLen = Math.max(jobs.length, 1);
 
-    const deliveryDates = transaction.transaction_transactionledgerjobs
-      ?.map(job => job.DeliveryDate_LdgrJob)
-      .filter(Boolean)
-      .join(', ') || "";
-    currentRow.cells[3].textContent = deliveryDates;
+    // Insert one row per job
+    for (let i = 0; i < maxLen; i++) {
+      const job = jobs[i] || {};
 
-    currentRow.cells[4].textContent = transaction.transaction_contactperson?.Name_ContactP || "";
+      const row = parentTbody.insertRow(originalRowIndex + i);
 
-    currentRow.cells[5].innerHTML = "";
-    currentRow.cells[6].innerHTML = "";
+      row.innerHTML = `
+        <td class="clickable">${i === 0 ? (so.so_upk || "") : ""}</td>
+        <td>${i === 0 ? `<input type="text" value="" />` : ""}</td>
+        <td>${job.Description_LdgrJob || ""}</td>
+        <td>${i === 0 ? (transaction.transaction_customer?.Address_Cust || "") : ""}</td>
+        <td>${job.DeliveryDate_LdgrJob || ""}</td>
+        <td>${i === 0 ? (transaction.transaction_contactperson?.Name_ContactP || "") : ""}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>${i === 0 ? (so.so_upk || "") : ""}</td>
+        <td>${i === 0 ? `<input type="text" value="__________________________________" />` : ""}</td>
+        <td>${i === 0 ? `<button type="button" onclick="clearRow(this)">Clear</button>` : ""}</td>
+      `;
 
-    currentRow.cells[7].textContent = "";
-
+      // Attach click events to new rows
+      attachClickEvents();
+    }
   } catch (error) {
     console.error("Error fetching transaction details:", error);
-    for (let i = 2; i <= 7; i++) currentRow.cells[i].textContent = "N/A";
+    // Insert a blank row with error info
+    const errorRow = parentTbody.insertRow(originalRowIndex);
+    errorRow.innerHTML = `
+      <td class="clickable">Click to select</td>
+      <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
+      <td></td><td>${so.so_upk || ""}</td>
+      <td><input type="text" value="__________________________________" /></td>
+      <td><button type="button" onclick="clearRow(this)">Clear</button></td>
+    `;
+    attachClickEvents();
   }
 
   closeModal();
 }
+
 
 // Print handler to print itinerary table
 function printItinerary() {
@@ -234,8 +271,10 @@ function printItinerary() {
   const dateLine = "Date: _________________________";
   const driverLine = "Driver's Name: _________________";
 
+  // Clone the table so we don't mess with original on page
   const tableClone = document.getElementById("dataTable").cloneNode(true);
 
+  // Replace all inputs with their values as text
   tableClone.querySelectorAll("input").forEach(input => {
     const td = input.closest("td");
     if (td) {
@@ -243,26 +282,60 @@ function printItinerary() {
     }
   });
 
+  // Remove last header and last cell in each row (buttons etc)
   const theadRow = tableClone.querySelector("thead tr");
   if (theadRow) theadRow.removeChild(theadRow.lastElementChild);
   const rows = tableClone.querySelectorAll("tbody tr");
   rows.forEach(row => row.removeChild(row.lastElementChild));
 
+  // Create the print HTML with CSS for widths and clamp
   const printContent = `
     <html>
       <head>
         <title>Logistic Itinerary</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { font-size: 20px; margin-bottom: 20px; }
-          .info { margin-bottom: 15px; font-size: 16px; }
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            font-size: 12px;
+          }
+          h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+          }
+          .info {
+            margin-bottom: 15px;
+            font-size: 14px;
+          }
           table, th, td {
             border: 1px solid black;
             border-collapse: collapse;
-            padding: 8px;
-            width: 100%;
+            padding: 6px;
             text-align: left;
+            vertical-align: top;
+            word-break: normal; /* prevent breaking mid word */
           }
+
+          /* SO# column - first column narrow and no wrap */
+          table td:nth-child(1),
+          table th:nth-child(1) {
+            width: 80px;
+            white-space: nowrap;
+            font-weight: bold;
+          }
+
+          /* Item Description column - third column wider with clamp to max 2 lines */
+          table td:nth-child(3),
+          table th:nth-child(3) {
+            width: 400px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: showing;
+            text-overflow: ellipsis;
+            white-space: normal;
+          }
+            
         </style>
       </head>
       <body>

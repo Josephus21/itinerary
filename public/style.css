@@ -141,6 +141,12 @@ td.clickable {
   user-select: none;
   box-shadow: inset 0 0 5px #a3c4ff;
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  color: blue;
+  text-decoration: underline;
+}
+tr.jo-subrow td {
+  background-color: #f9f9f9;
+  font-style: italic;
 }
 
 td.clickable:hover {
