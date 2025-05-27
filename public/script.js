@@ -177,7 +177,7 @@ async function selectSO(so) {
   }
 
   currentRow.cells[8].textContent = so.so_upk || "";
-  currentRow.cells[9].textContent = "";
+  currentRow.cells[9].textContent = ' <input type="text" value="__________________________________" />'; ;
   currentRow.cells[10].innerHTML = `<button type="button" onclick="clearRow(this)">Clear</button>`;
 
   if (!so.so_pk) {
@@ -220,8 +220,8 @@ async function selectSO(so) {
     currentRow.cells[4].textContent = transaction.transaction_contactperson?.Name_ContactP || "";
 
     // Insert time inputs in cells 5 and 6
-    currentRow.cells[5].innerHTML = `<input type="time" value="" />`;
-    currentRow.cells[6].innerHTML = `<input type="time" value="" />`;
+    currentRow.cells[5].innerHTML = "";
+    currentRow.cells[6].innerHTML = "";
 
     currentRow.cells[7].textContent = "";
 
