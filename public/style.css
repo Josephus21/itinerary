@@ -81,6 +81,32 @@ table, th, td {
     line-height: 1.2;
     overflow: hidden;
   }
+td.description-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+}
+
+td.description-cell:hover::after {
+  content: attr(data-fulltext);
+  position: absolute;
+  white-space: normal;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 8px;
+  z-index: 1000;
+  top: 100%;
+  left: 0;
+  width: auto;
+  max-width: 500px;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.15);
+  color: #333;
+}
+
+
 
   tr {
     height: 40%; /* Approximate 40% of default height per row */
@@ -131,6 +157,7 @@ tbody td {
   position: relative;
   border: none;
 }
+
 
 td.clickable {
   background-color: #eaf3ff;
@@ -430,4 +457,19 @@ input.qty-input:focus {
     padding: 10px 12px;
     font-size: 0.9rem;
   }
+
+/* Add this to your CSS section */
+th {
+  position: relative;
+  white-space: nowrap;
+}
+
+}
+button {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 9999 !important;
 }

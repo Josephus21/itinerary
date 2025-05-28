@@ -6,12 +6,10 @@ const dataTable = document.getElementById("dataTable").querySelector("tbody");
 let currentRow = null;
 let salesOrderCache = null;
 
-// Determine API base URL dynamically
 const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
   : 'https://itinerary-keqh.onrender.com';
 
-// Attach click event listeners to all clickable cells
 function attachClickEvents() {
   document.querySelectorAll("td.clickable").forEach(cell => {
     cell.removeEventListener("click", onCellClick);
@@ -19,25 +17,25 @@ function attachClickEvents() {
   });
 }
 
-// When a clickable cell is clicked, open modal and set current row
 function onCellClick() {
   currentRow = this.parentElement;
   openModal();
 }
 
-// Add a new row to the data table
 function addRow() {
   const row = dataTable.insertRow();
   row.innerHTML = `
     <td class="clickable">Click to select</td>
     <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
     <td></td><td></td>
-    <td><button type="button" onclick="clearRow(this)">Clear</button></td>
+    <td>
+      <button type="button" onclick="clearRow(this)">Clear</button>
+      <button type="button" onclick="deleteRow(this)">Delete Row</button>
+    </td>
   `;
   attachClickEvents();
 }
 
-// Clear data in a specific row and reset the first cell text
 function clearRow(button) {
   const row = button.closest("tr");
   if (!row) return;
@@ -46,7 +44,56 @@ function clearRow(button) {
   }
 }
 
-// Show modal and load sales orders (either cached or fetch new)
+function deleteRow(button) {
+  const row = button.closest("tr");
+  if (!row) return;
+
+  const blockId = row.dataset.blockId;
+
+  // If no blockId, just remove row normally
+  if (!blockId) {
+    row.remove();
+    return;
+  }
+
+  const tbody = row.parentElement;
+  const blockRows = Array.from(tbody.querySelectorAll(`tr[data-block-id="${blockId}"]`));
+  const index = blockRows.indexOf(row);
+
+  // If only one row in block, confirm before deleting
+  if (blockRows.length === 1) {
+    if (!confirm("This is the only row for this SO. Delete anyway?")) return;
+    row.remove();
+    return;
+  }
+
+  if (index === 0) {
+    // Deleting the first row (SO# row)
+    // Clear description and delivery date cells in first row
+    row.cells[2].textContent = "";
+    row.cells[4].textContent = "";
+
+    // Shift descriptions and delivery dates from rows below UP one row starting at i=1
+    for (let i = 1; i < blockRows.length - 1; i++) {
+      blockRows[i].cells[2].textContent = blockRows[i + 1].cells[2].textContent;
+      blockRows[i].cells[4].textContent = blockRows[i + 1].cells[4].textContent;
+    }
+
+    // Remove last row, since data shifted up
+    blockRows[blockRows.length - 1].remove();
+  } else {
+    // Deleting a subrow (not SO# row)
+    // Shift descriptions and delivery dates UP from the deleted row index
+    for (let i = index; i < blockRows.length - 1; i++) {
+      blockRows[i].cells[2].textContent = blockRows[i + 1].cells[2].textContent;
+      blockRows[i].cells[4].textContent = blockRows[i + 1].cells[4].textContent;
+    }
+
+    // Remove last row after shifting
+    blockRows[blockRows.length - 1].remove();
+  }
+}
+
 function openModal() {
   modal.style.display = "block";
   searchInput.value = "";
@@ -57,12 +104,10 @@ function openModal() {
   }
 }
 
-// Close the modal dialog
 function closeModal() {
   modal.style.display = "none";
 }
 
-// Filter sales orders list as user types in search input
 searchInput.addEventListener("input", () => {
   if (!salesOrderCache) return;
   const query = searchInput.value.toLowerCase();
@@ -72,7 +117,6 @@ searchInput.addEventListener("input", () => {
   renderSOList(filtered);
 });
 
-// Fetch sales orders from the API
 function showLoadingIndicator(text = "Loading...") {
   soList.innerHTML = `
     <div class="loading-indicator">
@@ -131,7 +175,6 @@ async function fetchSOs() {
       salesOrderCache = json.data[0];
       clearLoadingIndicator();
 
-      // Progressive render in batches
       const batchSize = 10;
       for (let i = 0; i < salesOrderCache.length; i += batchSize) {
         const batch = salesOrderCache.slice(i, i + batchSize);
@@ -147,7 +190,6 @@ async function fetchSOs() {
   }
 }
 
-// Render sales orders into the modal list
 function renderSOList(salesOrders) {
   soList.innerHTML = "";
   if (salesOrders.length === 0) {
@@ -163,28 +205,29 @@ function renderSOList(salesOrders) {
   });
 }
 
-// Select a sales order and populate current row with its data
 async function selectSO(so) {
   if (!currentRow) return;
 
   const parentTbody = currentRow.parentElement;
-  const originalRowIndex = currentRow.sectionRowIndex; // FIX: use sectionRowIndex instead of rowIndex
+  const originalRowIndex = currentRow.sectionRowIndex;
+  const blockId = `block-${so.so_pk || Date.now()}`;
 
-  // Clear the current row before inserting multiple rows if needed
   currentRow.remove();
   currentRow = null;
 
   if (!so.so_pk) {
-    console.error("Missing so_pk in selected sales order");
-    // Insert a blank row to keep UI consistent
     const blankRow = parentTbody.insertRow(originalRowIndex);
+    blankRow.dataset.blockId = blockId;
     blankRow.innerHTML = `
       <td class="clickable">Click to select</td>
       <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
       <td></td><td>${so.so_upk || ""}</td>
       <td><input type="text" value="__________________________________" /></td>
-      <td><button type="button" onclick="clearRow(this)">Clear</button></td>
-    `;
+       <button type="button" onclick="clearRow(this)">Clear</button>
+    <button type="button" onclick="deleteRow(this)">Delete Row</button>
+    ${i === 0 ? `<button type="button" onclick="deleteBlock(this)">Delete SO</button>` : ""}
+  </td>
+`;
     attachClickEvents();
     closeModal();
     return;
@@ -197,84 +240,74 @@ async function selectSO(so) {
       body: JSON.stringify({ so_pk: so.so_pk }),
     });
 
-    if (!transactionResponse.ok)
-      throw new Error(`HTTP error! status: ${transactionResponse.status}`);
+    if (!transactionResponse.ok) throw new Error(`HTTP error! status: ${transactionResponse.status}`);
 
     const transactionData = await transactionResponse.json();
     const transaction = transactionData.data?.[0];
-
-    if (!transaction) {
-      console.warn("Transaction data is empty");
-      // Insert a blank row with N/A info
-      const blankRow = parentTbody.insertRow(originalRowIndex);
-      blankRow.innerHTML = `
-        <td class="clickable">Click to select</td>
-        <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
-        <td></td><td>${so.so_upk || ""}</td>
-        <td><input type="text" value="__________________________________" /></td>
-        <td><button type="button" onclick="clearRow(this)">Clear</button></td>
-      `;
-      attachClickEvents();
-      closeModal();
-      return;
-    }
-
-    // Extract item descriptions and delivery dates from all jobs
-    const jobs = transaction.transaction_transactionledgerjobs || [];
+    const jobs = transaction?.transaction_transactionledgerjobs || [];
     const maxLen = Math.max(jobs.length, 1);
 
-    // Insert one row per job
     for (let i = 0; i < maxLen; i++) {
       const job = jobs[i] || {};
-
       const row = parentTbody.insertRow(originalRowIndex + i);
+      row.dataset.blockId = blockId;
 
       row.innerHTML = `
         <td class="clickable">${i === 0 ? (so.so_upk || "") : ""}</td>
         <td>${i === 0 ? `<input type="text" value="" />` : ""}</td>
-        <td>${job.Description_LdgrJob || ""}</td>
+        <td title="${job.Description_LdgrJob || ""}" style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+  ${job.Description_LdgrJob || ""}
+</td>
+
+       
+       
         <td>${i === 0 ? (transaction.transaction_customer?.Address_Cust || "") : ""}</td>
+       
+       
         <td>${job.DeliveryDate_LdgrJob || ""}</td>
+        
         <td>${i === 0 ? (transaction.transaction_contactperson?.Name_ContactP || "") : ""}</td>
-        <td></td>
-        <td></td>
-        <td></td>
+        
+        
+        <td></td><td></td><td></td>
         <td>${i === 0 ? (so.so_upk || "") : ""}</td>
         <td>${i === 0 ? `<input type="text" value="__________________________________" />` : ""}</td>
-        <td>${i === 0 ? `<button type="button" onclick="clearRow(this)">Clear</button>` : ""}</td>
+        <td>
+          <button type="button" onclick="clearRow(this)">Clear</button>
+          <button type="button" onclick="deleteRow(this)">Delete Row</button>
+          ${i === 0 ? `<button type="button" onclick="deleteBlock(this)">Delete SO</button>` : ""}
+        </td>
       `;
 
-      // Attach click events to new rows
       attachClickEvents();
     }
   } catch (error) {
     console.error("Error fetching transaction details:", error);
-    // Insert a blank row with error info
-    const errorRow = parentTbody.insertRow(originalRowIndex);
-    errorRow.innerHTML = `
-      <td class="clickable">Click to select</td>
-      <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
-      <td></td><td>${so.so_upk || ""}</td>
-      <td><input type="text" value="__________________________________" /></td>
-      <td><button type="button" onclick="clearRow(this)">Clear</button></td>
-    `;
-    attachClickEvents();
   }
 
   closeModal();
 }
 
+function deleteBlock(button) {
+  const row = button.closest("tr");
+  if (!row) return;
 
-// Print handler to print itinerary table
+  const blockId = row.dataset.blockId;
+  if (!blockId) {
+    row.remove();
+    return;
+  }
+
+  const rowsToDelete = Array.from(row.parentElement.querySelectorAll(`tr[data-block-id="${blockId}"]`));
+  rowsToDelete.forEach(r => r.remove());
+}
+
 function printItinerary() {
   const header = "LOGISTIC ITINERARY";
   const dateLine = "Date: _________________________";
   const driverLine = "Driver's Name: _________________";
 
-  // Clone the table so we don't mess with original on page
   const tableClone = document.getElementById("dataTable").cloneNode(true);
-
-  // Replace all inputs with their values as text
   tableClone.querySelectorAll("input").forEach(input => {
     const td = input.closest("td");
     if (td) {
@@ -282,13 +315,11 @@ function printItinerary() {
     }
   });
 
-  // Remove last header and last cell in each row (buttons etc)
   const theadRow = tableClone.querySelector("thead tr");
   if (theadRow) theadRow.removeChild(theadRow.lastElementChild);
   const rows = tableClone.querySelectorAll("tbody tr");
   rows.forEach(row => row.removeChild(row.lastElementChild));
 
-  // Create the print HTML with CSS for widths and clamp
   const printContent = `
     <html>
       <head>
@@ -313,18 +344,14 @@ function printItinerary() {
             padding: 6px;
             text-align: left;
             vertical-align: top;
-            word-break: normal; /* prevent breaking mid word */
+            word-break: normal;
           }
-
-          /* SO# column - first column narrow and no wrap */
           table td:nth-child(1),
           table th:nth-child(1) {
             width: 80px;
             white-space: nowrap;
             font-weight: bold;
           }
-
-          /* Item Description column - third column wider with clamp to max 2 lines */
           table td:nth-child(3),
           table th:nth-child(3) {
             width: 400px;
@@ -335,7 +362,6 @@ function printItinerary() {
             text-overflow: ellipsis;
             white-space: normal;
           }
-            
         </style>
       </head>
       <body>
@@ -361,5 +387,4 @@ function printItinerary() {
   }, 300);
 }
 
-// Initial setup: attach click events on page load
 attachClickEvents();
