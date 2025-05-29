@@ -132,11 +132,7 @@ function clearLoadingIndicator() {
 }
 
 async function fetchSOs() {
-  const today = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+ const today = new Date().toISOString().split('T')[0]; // Format: "YYYY-MM-DD"
 
   showLoadingIndicator("Loading sales orders...");
 
@@ -149,17 +145,17 @@ async function fetchSOs() {
         preparedBy: "Josephus Abatayo",
         viewAll: 1,
         searchKey: "",
-        filterDate: {
-          filter: "as of",
-          date1: { hide: false, date: today },
-          date2: { hide: true, date: today },
+         filterDate: {
+     filter: "from to",
+        date1: { hide: false, date: "2023-01-01" },
+        date2: { hide: false, date: today },
         },
         locationPK: "00a18fc0-051d-11ea-8e35-aba492d8cb65",
         departmentPK: null,
         customerPK: null,
         salesRepPK: null,
         status: "",
-        limit: 300,
+        limit: 600,
         offset: 0,
       }),
     });
