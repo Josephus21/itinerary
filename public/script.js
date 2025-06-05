@@ -266,7 +266,7 @@ async function selectSO(so) {
         
         
         <td></td><td></td><td></td>
-       <td>${i === 0 ? `<input type="text" value="" />` : ""}</td>
+      
         <td>${i === 0 ? `<input type="text" value="__________________________________" />` : ""}</td>
         <td>
           <button type="button" onclick="clearRow(this)">Clear</button>
