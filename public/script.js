@@ -155,7 +155,7 @@ async function fetchSOs() {
         customerPK: null,
         salesRepPK: null,
         status: "",
-        limit: 600,
+        limit: 800,
         offset: 0,
       }),
     });
