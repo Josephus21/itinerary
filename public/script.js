@@ -217,7 +217,7 @@ async function selectSO(so) {
     blankRow.innerHTML = `
       <td class="clickable">Click to select</td>
       <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
-      <td></td><td>${so.so_upk || ""}</td>
+      <td><input type="text" value="" /></td>
       <td><input type="text" value="__________________________________" /></td>
        <button type="button" onclick="clearRow(this)">Clear</button>
     <button type="button" onclick="deleteRow(this)">Delete Row</button>
