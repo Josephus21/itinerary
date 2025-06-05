@@ -33,7 +33,6 @@ function addRow() {
       <button type="button" onclick="deleteRow(this)">Delete Row</button>
     </td>
   `;
-  attachClickEvents();
 }
 
 function clearRow(button) {
