@@ -95,7 +95,7 @@ function deleteRow(button) {
 }
 
 function openModal() {
-  modal.classList.add("show");
+  modal.style.display = "block";
   searchInput.value = "";
   if (salesOrderCache) {
     renderSOList(salesOrderCache);
