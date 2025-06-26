@@ -90,6 +90,7 @@ td.description-cell {
   position: relative;
 }
 
+
 td.description-cell:hover::after {
   content: attr(data-fulltext);
   position: absolute;
@@ -111,15 +112,9 @@ td.description-cell:hover::after {
   tr {
     height: 40%; /* Approximate 40% of default height per row */
   }
-
-  th:nth-child(1), td:nth-child(1),  /* SO */
-  th:nth-child(8), td:nth-child(8) { /* TO */
-    width: 80px;
-  }
-
-  th:last-child, td:last-child {
-    width: 200px;
-  }
+table th, table td {
+  min-width: 80px;
+}
 
 thead tr {
   background: #34495e;
@@ -473,3 +468,44 @@ button {
   position: relative !important;
   z-index: 9999 !important;
 }
+ .dropdown {
+    display: inline-block;
+    position: relative;
+  }
+
+  .dropbtn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 8px 16px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #ffffff;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+    z-index: 1;
+  }
+
+  .dropdown-content a {
+    color: black;
+    padding: 8px 12px;
+    text-decoration: none;
+    display: block;
+  }
+
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+  }
+
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+
+  .dropdown:hover .dropbtn {
+    background-color: #3e8e41;
+  }
