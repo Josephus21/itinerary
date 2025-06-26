@@ -1,3 +1,4 @@
+
 const modal = document.getElementById("soModal");
 const soList = document.getElementById("soList");
 const searchInput = document.getElementById("searchInput");
@@ -26,11 +27,18 @@ function addRow() {
   const row = dataTable.insertRow();
   row.innerHTML = `
     <td class="clickable">Click to select</td>
-    <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-    <td></td><td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  <td></td>
     <td>
-      <button type="button" onclick="clearRow(this)">Clear</button>
-      <button type="button" onclick="deleteRow(this)">Delete Row</button>
+      <button type="button" onclick="deleteRow(this)">Delete</button>
     </td>
   `;
   attachClickEvents();
@@ -50,7 +58,6 @@ function deleteRow(button) {
 
   const blockId = row.dataset.blockId;
 
-  // If no blockId, just remove row normally
   if (!blockId) {
     row.remove();
     return;
@@ -60,7 +67,6 @@ function deleteRow(button) {
   const blockRows = Array.from(tbody.querySelectorAll(`tr[data-block-id="${blockId}"]`));
   const index = blockRows.indexOf(row);
 
-  // If only one row in block, confirm before deleting
   if (blockRows.length === 1) {
     if (!confirm("This is the only row for this SO. Delete anyway?")) return;
     row.remove();
@@ -68,28 +74,18 @@ function deleteRow(button) {
   }
 
   if (index === 0) {
-    // Deleting the first row (SO# row)
-    // Clear description and delivery date cells in first row
     row.cells[2].textContent = "";
     row.cells[4].textContent = "";
-
-    // Shift descriptions and delivery dates from rows below UP one row starting at i=1
     for (let i = 1; i < blockRows.length - 1; i++) {
       blockRows[i].cells[2].textContent = blockRows[i + 1].cells[2].textContent;
       blockRows[i].cells[4].textContent = blockRows[i + 1].cells[4].textContent;
     }
-
-    // Remove last row, since data shifted up
     blockRows[blockRows.length - 1].remove();
   } else {
-    // Deleting a subrow (not SO# row)
-    // Shift descriptions and delivery dates UP from the deleted row index
     for (let i = index; i < blockRows.length - 1; i++) {
       blockRows[i].cells[2].textContent = blockRows[i + 1].cells[2].textContent;
       blockRows[i].cells[4].textContent = blockRows[i + 1].cells[4].textContent;
     }
-
-    // Remove last row after shifting
     blockRows[blockRows.length - 1].remove();
   }
 }
@@ -132,7 +128,7 @@ function clearLoadingIndicator() {
 }
 
 async function fetchSOs() {
- const today = new Date().toISOString().split('T')[0]; // Format: "YYYY-MM-DD"
+  const today = new Date().toISOString().split('T')[0];
 
   showLoadingIndicator("Loading sales orders...");
 
@@ -145,10 +141,10 @@ async function fetchSOs() {
         preparedBy: "Josephus Abatayo",
         viewAll: 1,
         searchKey: "",
-         filterDate: {
-     filter: "from to",
-        date1: { hide: false, date: "2023-01-01" },
-        date2: { hide: false, date: today },
+        filterDate: {
+          filter: "from to",
+          date1: { hide: false, date: "2023-01-01" },
+          date2: { hide: false, date: today },
         },
         locationPK: "00a18fc0-051d-11ea-8e35-aba492d8cb65",
         departmentPK: null,
@@ -211,36 +207,18 @@ async function selectSO(so) {
   currentRow.remove();
   currentRow = null;
 
-  if (!so.so_pk) {
-    const blankRow = parentTbody.insertRow(originalRowIndex);
-    blankRow.dataset.blockId = blockId;
-    blankRow.innerHTML = `
-      <td class="clickable">Click to select</td>
-      <td></td><td>N/A</td><td></td><td>N/A</td><td></td><td></td><td></td>
-      <td><input type="text" value="" /></td>
-      <td><input type="text" value="__________________________________" /></td>
-       <button type="button" onclick="clearRow(this)">Clear</button>
-    <button type="button" onclick="deleteRow(this)">Delete Row</button>
-    ${i === 0 ? `<button type="button" onclick="deleteBlock(this)">Delete SO</button>` : ""}
-  </td>
-`;
-    attachClickEvents();
-    closeModal();
-    return;
-  }
-
   try {
-    const transactionResponse = await fetch(`${API_BASE_URL}/api/get_transaction`, {
+    const response = await fetch(`${API_BASE_URL}/api/get_transaction`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ so_pk: so.so_pk }),
     });
 
-    if (!transactionResponse.ok) throw new Error(`HTTP error! status: ${transactionResponse.status}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-    const transactionData = await transactionResponse.json();
-    const transaction = transactionData.data?.[0];
-    const jobs = transaction?.transaction_transactionledgerjobs || [];
+    const json = await response.json();
+    const trx = json.data?.[0];
+    const jobs = trx?.transaction_transactionledgerjobs || [];
     const maxLen = Math.max(jobs.length, 1);
 
     for (let i = 0; i < maxLen; i++) {
@@ -250,29 +228,29 @@ async function selectSO(so) {
 
       row.innerHTML = `
         <td class="clickable">${i === 0 ? (so.so_upk || "") : ""}</td>
-        <td>${i === 0 ? `<input type="text" value="" />` : ""}</td>
+        <td></td>
         <td title="${job.Description_LdgrJob || ""}" style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-  ${job.Description_LdgrJob || ""}
-</td>
-
-       
-       
-        <td>${i === 0 ? (transaction.transaction_customer?.Address_Cust || "") : ""}</td>
-       
-       
-        <td>${job.DeliveryDate_LdgrJob || ""}</td>
-        
-        <td>${i === 0 ? (transaction.transaction_contactperson?.Name_ContactP || "") : ""}</td>
-        
-        
-        <td></td><td></td><td></td>
-      <td></td>
-        <td>${i === 0 ? `<input type="text" value="__________________________________" />` : ""}</td>
-        <td>
-          <button type="button" onclick="clearRow(this)">Clear</button>
-          <button type="button" onclick="deleteRow(this)">Delete Row</button>
-          ${i === 0 ? `<button type="button" onclick="deleteBlock(this)">Delete SO</button>` : ""}
+          ${job.Description_LdgrJob || ""}
         </td>
+
+        <td title="${i === 0 ? (trx.transaction_customer?.Address_Cust || "") : ""}" style="max-width: 400px; overflow: hidden; text-overflow: ellipsis;">
+       ${i === 0 ? (trx.transaction_customer?.Address_Cust || "") : ""}
+        </td>
+      
+      
+        <td>                           </td>
+        <td>${i === 0 ? (trx.transaction_contactperson?.Name_ContactP || "") : ""}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>_______________________</td>
+        
+       <td class="space-x-1">
+        <button type="button" onclick="deleteRow(this)" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+ 
+  ${i === 0 ? `<button type="button" onclick="deleteBlock(this)" class="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700">Delete SO</button>` : ""}
+</td>
       `;
 
       attachClickEvents();
@@ -296,6 +274,124 @@ function deleteBlock(button) {
 
   const rowsToDelete = Array.from(row.parentElement.querySelectorAll(`tr[data-block-id="${blockId}"]`));
   rowsToDelete.forEach(r => r.remove());
+}
+async function printPOSFormat() {
+  const printWindow = window.open('', '', 'width=900,height=700');
+  if (!printWindow) {
+    alert("Popup blocked. Please allow popups for this site.");
+    return;
+  }
+
+  const posItemsDiv = document.getElementById("posItems");
+  posItemsDiv.innerHTML = "";
+
+  const transactionDate = new Date().toLocaleDateString();
+  const transactionNumber = `TRX-${Date.now()}`;
+
+  const usedSOUPKs = new Set();
+  const itineraryRows = document.querySelectorAll("#dataTable tbody tr");
+  itineraryRows.forEach(row => {
+    const soUpk = row.cells[0]?.textContent?.trim();
+    if (soUpk) usedSOUPKs.add(soUpk);
+  });
+
+  if (!salesOrderCache || salesOrderCache.length === 0) {
+    alert("No sales orders loaded. Open the modal first.");
+    return;
+  }
+
+  const matchedSOs = salesOrderCache.filter(so => usedSOUPKs.has(so.so_upk));
+
+  for (const so of matchedSOs) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/get_transaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ so_pk: so.so_pk }),
+      });
+
+      if (!res.ok) continue;
+
+      const json = await res.json();
+      const trx = json.data?.[0];
+      const jobs = trx?.transaction_transactionledgerjobs || [];
+      const customerName = trx?.transaction_customer?.Name_Cust || 'N/A';
+      const shipTo = trx?.transaction_customer?.Address_Cust || 'No Ship Address';
+
+      for (const job of jobs) {
+        const joNo = job.transactionledgerjob_transactionjo?.UserPK_TransH || 'No JO';
+        const description = job.Description_LdgrJob || 'No Description';
+
+        const itemDiv = document.createElement("div");
+itemDiv.style.marginBottom = "30px";
+itemDiv.style.whiteSpace = "pre-wrap";
+itemDiv.style.pageBreakAfter = "always"; // <- Add this line
+itemDiv.classList.add("jo-block");
+        itemDiv.innerHTML = `
+<div style="text-align: center;">
+  <img src="logo.jpg" alt="Logo" style="max-width: 100px; margin-bottom: 2px;" />
+  <div style="margin-top: 0px; font-weight: bold;">Cebu Graphicstar Imaging Corp.</div>
+</div>
+
+<div><strong>Transaction #:</strong> ${transactionNumber}</div>
+  <div><strong>Customer:</strong> ${customerName}</div>
+  <div><strong>JO#:</strong> ${joNo}</div>
+  <div><strong>Description:</strong> ${description}</div>
+  <div><strong>Ship to:</strong> ${shipTo}</div>
+  <hr style="border-top: dashed 1px #000; margin-top: 1px;">
+`.trim();
+
+
+        posItemsDiv.appendChild(itemDiv);
+      }
+
+    } catch (e) {
+      console.error("POS fetch failed:", e);
+    }
+  }
+
+  const printContents = document.getElementById("posPrintArea").innerHTML;
+  printWindow.document.write(`
+    <html>
+    <head>
+      <style>
+        @media print {
+          @page {
+            size: 80mm auto; /* Ensure it's receipt width */
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace;
+            font-size: 10px;
+          }
+          .pos-receipt {
+            width: 72mm;
+            padding: 4mm;
+            white-space: pre-wrap;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="pos-receipt">
+        ${printContents}
+      </div>
+    </body>
+  </html>
+`);
+  
+  printWindow.document.close();
+printWindow.onload = () => {
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+};
+
+
+
+
 }
 
 function printItinerary() {
@@ -340,23 +436,6 @@ function printItinerary() {
             padding: 6px;
             text-align: left;
             vertical-align: top;
-            word-break: normal;
-          }
-          table td:nth-child(1),
-          table th:nth-child(1) {
-            width: 80px;
-            white-space: nowrap;
-            font-weight: bold;
-          }
-          table td:nth-child(3),
-          table th:nth-child(3) {
-            width: 400px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: showing;
-            text-overflow: ellipsis;
-            white-space: normal;
           }
         </style>
       </head>
@@ -384,3 +463,4 @@ function printItinerary() {
 }
 
 attachClickEvents();
+
