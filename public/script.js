@@ -285,24 +285,34 @@ async function printPOSFormat() {
   const posItemsDiv = document.getElementById("posItems");
   posItemsDiv.innerHTML = "";
 
-  const transactionDate = new Date().toLocaleDateString();
   const transactionNumber = `TRX-${Date.now()}`;
+  const allRows = Array.from(document.querySelectorAll("#dataTable tbody tr"));
 
-  const usedSOUPKs = new Set();
-  const itineraryRows = document.querySelectorAll("#dataTable tbody tr");
-  itineraryRows.forEach(row => {
-    const soUpk = row.cells[0]?.textContent?.trim();
-    if (soUpk) usedSOUPKs.add(soUpk);
-  });
+  // 1. Group visible, not-deleted rows by blockId
+  const blockMap = new Map();
+  for (const row of allRows) {
+    if (row.dataset.deleted === "true" || row.style.display === "none") continue;
+    const blockId = row.dataset.blockId;
+    if (!blockId) continue;
+
+    if (!blockMap.has(blockId)) {
+      blockMap.set(blockId, []);
+    }
+    blockMap.get(blockId).push(row);
+  }
 
   if (!salesOrderCache || salesOrderCache.length === 0) {
-    alert("No sales orders loaded. Open the modal first.");
+    alert("No sales orders loaded.");
     return;
   }
 
-  const matchedSOs = salesOrderCache.filter(so => usedSOUPKs.has(so.so_upk));
+  for (const [blockId, rows] of blockMap.entries()) {
+    const soUpk = rows[0].cells[0]?.textContent?.trim();
+    if (!soUpk) continue;
 
-  for (const so of matchedSOs) {
+    const so = salesOrderCache.find(s => s.so_upk === soUpk);
+    if (!so) continue;
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/get_transaction`, {
         method: "POST",
@@ -314,37 +324,42 @@ async function printPOSFormat() {
 
       const json = await res.json();
       const trx = json.data?.[0];
-      const jobs = trx?.transaction_transactionledgerjobs || [];
+      const allJobs = trx?.transaction_transactionledgerjobs || [];
       const customerName = trx?.transaction_customer?.Name_Cust || 'N/A';
       const shipTo = trx?.transaction_customer?.Address_Cust || 'No Ship Address';
 
-      for (const job of jobs) {
+      // 2. Use only visible JO Descriptions from UI to match printed ones
+      const visibleDescriptions = new Set(
+        rows.map(r => r.cells[2]?.textContent?.trim()).filter(desc => desc)
+      );
+
+      for (const job of allJobs) {
+        const description = job.Description_LdgrJob || "";
+        if (!visibleDescriptions.has(description)) continue;
+
         const joNo = job.transactionledgerjob_transactionjo?.UserPK_TransH || 'No JO';
-        const description = job.Description_LdgrJob || 'No Description';
 
         const itemDiv = document.createElement("div");
-itemDiv.style.marginBottom = "30px";
-itemDiv.style.whiteSpace = "pre-wrap";
-itemDiv.style.pageBreakAfter = "always"; // <- Add this line
-itemDiv.classList.add("jo-block");
+        itemDiv.style.marginBottom = "30px";
+        itemDiv.style.whiteSpace = "pre-wrap";
+        itemDiv.style.pageBreakAfter = "always";
+        itemDiv.classList.add("jo-block");
+
         itemDiv.innerHTML = `
 <div style="text-align: center;">
   <img src="logo.jpg" alt="Logo" style="max-width: 100px; margin-bottom: 2px;" />
   <div style="margin-top: 0px; font-weight: bold;">Cebu Graphicstar Imaging Corp.</div>
 </div>
-
 <div><strong>Transaction #:</strong> ${transactionNumber}</div>
-  <div><strong>Customer:</strong> ${customerName}</div>
-  <div><strong>JO#:</strong> ${joNo}</div>
-  <div><strong>Description:</strong> ${description}</div>
-  <div><strong>Ship to:</strong> ${shipTo}</div>
-  <hr style="border-top: dashed 1px #000; margin-top: 1px;">
-`.trim();
-
+<div><strong>Customer:</strong> ${customerName}</div>
+<div><strong>JO#:</strong> ${joNo}</div>
+<div><strong>Description:</strong> ${description}</div>
+<div><strong>Ship to:</strong> ${shipTo}</div>
+<hr style="border-top: dashed 1px #000; margin-top: 1px;">
+        `.trim();
 
         posItemsDiv.appendChild(itemDiv);
       }
-
     } catch (e) {
       console.error("POS fetch failed:", e);
     }
@@ -357,7 +372,7 @@ itemDiv.classList.add("jo-block");
       <style>
         @media print {
           @page {
-            size: 80mm auto; /* Ensure it's receipt width */
+            size: 80mm auto;
             margin: 0;
           }
           body {
@@ -380,18 +395,14 @@ itemDiv.classList.add("jo-block");
       </div>
     </body>
   </html>
-`);
+  `);
   
   printWindow.document.close();
-printWindow.onload = () => {
-  printWindow.focus();
-  printWindow.print();
-  printWindow.close();
-};
-
-
-
-
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
 }
 
 function printItinerary() {
