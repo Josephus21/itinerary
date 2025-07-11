@@ -339,26 +339,18 @@ async function printPOSFormat() {
 
         const joNo = job.transactionledgerjob_transactionjo?.UserPK_TransH || 'No JO';
 
-        const itemDiv = document.createElement("div");
-        itemDiv.style.marginBottom = "30px";
-        itemDiv.style.whiteSpace = "pre-wrap";
-        itemDiv.style.pageBreakAfter = "always";
-        itemDiv.classList.add("jo-block");
-
-        itemDiv.innerHTML = `
-<div style="text-align: center;">
-  <img src="logo.jpg" alt="Logo" style="max-width: 100px; margin-bottom: 2px;" />
-  <div style="margin-top: 0px; font-weight: bold;">Cebu Graphicstar Imaging Corp.</div>
-</div>
-<div><strong>Transaction #:</strong> ${transactionNumber}</div>
-<div><strong>Customer:</strong> ${customerName}</div>
-<div><strong>JO#:</strong> ${joNo}</div>
-<div><strong>Description:</strong> ${description}</div>
-<div><strong>Ship to:</strong> ${shipTo}</div>
-<hr style="border-top: dashed 1px #000; margin-top: 1px;">
-        `.trim();
-
-        posItemsDiv.appendChild(itemDiv);
+            const wrapper = document.createElement("div");
+wrapper.classList.add("pos-receipt");
+wrapper.innerHTML = `
+  <div style="text-align: center;">
+    <div style="font-weight: bold; font-size:14px;">Cebu Graphicstar Imaging Corp.</div>
+  </div>
+  <div><strong>Customer:</strong> ${customerName}</div>
+  <div><strong>JO#:</strong> ${joNo}</div>
+  <div><strong>Description:</strong> ${description}</div>
+  <div><strong>Ship to:</strong> ${shipTo}</div>
+`;
+posItemsDiv.appendChild(wrapper);
       }
     } catch (e) {
       console.error("POS fetch failed:", e);
@@ -370,23 +362,28 @@ async function printPOSFormat() {
     <html>
     <head>
       <style>
-        @media print {
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            font-family: monospace;
-            font-size: 10px;
-          }
-          .pos-receipt {
-            width: 72mm;
-            padding: 4mm;
-            white-space: pre-wrap;
-          }
-        }
+@media print {
+  @page {
+    size: 55mm 80mm;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .pos-receipt {
+    width: 80mm;
+    height: 55mm;
+    padding: 2mm;
+    font-size: 10px;
+    white-space: nowrap;
+    page-break-after: always;
+   
+  }
+}
+
       </style>
     </head>
     <body>
@@ -404,7 +401,6 @@ async function printPOSFormat() {
     printWindow.close();
   };
 }
-
 function printItinerary() {
   const header = "LOGISTIC ITINERARY";
   const dateLine = "Date: _________________________";
