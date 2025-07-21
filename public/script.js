@@ -364,7 +364,7 @@ posItemsDiv.appendChild(wrapper);
       <style>
 @media print {
   @page {
-    size: 55mm 80mm;
+    size: 60mm 80mm;
     margin: 0;
   }
 
