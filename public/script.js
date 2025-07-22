@@ -339,18 +339,21 @@ async function printPOSFormat() {
 
         const joNo = job.transactionledgerjob_transactionjo?.UserPK_TransH || 'No JO';
 
-            const wrapper = document.createElement("div");
-wrapper.classList.add("pos-receipt");
+const wrapper = document.createElement("div");
+wrapper.className = "pos-receipt";
 wrapper.innerHTML = `
-  <div style="text-align: center;">
-    <div style="font-weight: bold; font-size:14px;">Cebu Graphicstar Imaging Corp.</div>
+  <div style="text-align: center; font-weight: bold; font-size: 14px;">
+    Cebu Graphicstar Imaging Corp.
   </div>
   <div><strong>Customer:</strong> ${customerName}</div>
   <div><strong>JO#:</strong> ${joNo}</div>
   <div><strong>Description:</strong> ${description}</div>
   <div><strong>Ship to:</strong> ${shipTo}</div>
+
+  <div class="spacer"></div> <!-- This pushes bottom to fill space -->
 `;
 posItemsDiv.appendChild(wrapper);
+
       }
     } catch (e) {
       console.error("POS fetch failed:", e);
@@ -364,34 +367,44 @@ posItemsDiv.appendChild(wrapper);
       <style>
 @media print {
   @page {
-    size: 60mm 80mm;
+    size: 36mm 80mm;
     margin: 0;
   }
 
-  body {
+  html, body {
     margin: 0;
     padding: 0;
+    width: 80mm;
+    height: 35mm;
   }
 
   .pos-receipt {
     width: 80mm;
-    height: 55mm;
-    padding: 2mm;
+    height: 35mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     font-size: 10px;
-    white-space: nowrap;
+    padding: 1mm;
+    box-sizing: border-box;
     page-break-after: always;
-   
+  }
+
+  .spacer {
+    flex-grow: 1;
   }
 }
+
+
+
 
       </style>
     </head>
     <body>
-      <div class="pos-receipt">
-        ${printContents}
-      </div>
+      ${printContents} <!-- No extra wrapper here -->
     </body>
   </html>
+
   `);
   
   printWindow.document.close();
